@@ -78,7 +78,11 @@
     flex: 1;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     border: 1px solid #eeeef5;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
   }
+  .step-text { flex: 1; min-width: 0; }
   .step-content h3 {
     font-size: 17px; font-weight: 800; color: #1e1e2e;
     margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
@@ -93,6 +97,73 @@
     font-size: 13px; color: #6c63ff; font-weight: 600;
   }
   .step-content .tip span { font-weight: 400; color: #555; }
+
+  /* ===== MOCK PANEL ===== */
+  .mock {
+    width: 190px;
+    flex-shrink: 0;
+    background: #1a1a24;
+    border-radius: 14px;
+    padding: 14px 12px;
+    color: #e8e8f0;
+    font-size: 11px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    border: 1px solid #2e2e3e;
+  }
+  .mock-title {
+    font-size: 11px; font-weight: 700; color: #aaa;
+    letter-spacing: 0.06em; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .mock-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .mock-pill {
+    padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
+    background: #16161f; border: 1px solid #333; color: #aaa;
+  }
+  .mock-pill.active { background: #6c63ff; border-color: #6c63ff; color: #fff; }
+  .mock-label { font-size: 11px; color: #888; margin-bottom: 4px; margin-top: 8px; }
+  .mock-size { font-size: 11px; color: #555; margin-top: 6px; }
+  .mock-textarea {
+    width: 100%; background: #16161f; border: 1px solid #333;
+    border-radius: 6px; color: #e8e8f0; font-size: 11px;
+    padding: 6px 8px; resize: none; font-family: inherit; line-height: 1.5;
+    margin-bottom: 6px;
+  }
+  .mock-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .mock-select {
+    flex: 1; background: #16161f; border: 1px solid #333;
+    border-radius: 6px; color: #e8e8f0; font-size: 10px; padding: 5px 6px;
+  }
+  .mock-range-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .mock-range { flex: 1; accent-color: #6c63ff; height: 3px; cursor: default; }
+  .mock-range-val {
+    font-size: 10px; color: #aaa; background: #16161f; border: 1px solid #333;
+    border-radius: 4px; padding: 2px 5px; white-space: nowrap;
+  }
+  .mock-color-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .mock-color-swatch {
+    width: 28px; height: 24px; border-radius: 5px; border: 1px solid #333; flex-shrink: 0;
+  }
+  .mock-input {
+    flex: 1; background: #16161f; border: 1px solid #333;
+    border-radius: 6px; color: #e8e8f0; font-size: 10px; padding: 5px 7px;
+  }
+  .mock-upload {
+    border: 1.5px dashed #333; border-radius: 8px; padding: 10px 6px;
+    text-align: center; color: #555; font-size: 10px; line-height: 1.6;
+    margin-bottom: 6px;
+  }
+  .mock-btn-green {
+    width: 100%; background: #22c55e; color: #fff;
+    border: none; border-radius: 8px; font-size: 12px; font-weight: 700;
+    padding: 9px; text-align: center; margin-bottom: 4px;
+  }
+  .mock-hint { font-size: 10px; color: #555; text-align: center; }
+  .mock-filename { font-size: 10px; color: #888; margin-bottom: 6px; }
+  @media (max-width: 640px) {
+    .step-content { flex-direction: column; }
+    .mock { width: 100%; }
+  }
 
   /* ===== PLATFORM TABLE ===== */
   .platform-section { margin-bottom: 56px; }
@@ -207,69 +278,172 @@
   <div class="section-title">🪜 作成ステップガイド</div>
   <div class="steps">
 
+    <!-- STEP 1 -->
     <div class="step">
-      <div class="step-line">
-        <div class="step-num">1</div>
-      </div>
+      <div class="step-line"><div class="step-num">1</div></div>
       <div class="step-content">
-        <h3>📐 比率（サイズ）を選ぶ</h3>
-        <p>まず最初に、どのプラットフォーム向けのサムネイルを作るかを選びます。左パネルの一番上「比率設定」から選択してください。</p>
-        <div class="tip">💡 <span>迷ったら <strong>16:9</strong> を選べばOK。YouTubeやnote動画など幅広く使えます。</span></div>
+        <div class="step-text">
+          <h3>📐 比率（サイズ）を選ぶ</h3>
+          <p>まず最初に、どのプラットフォーム向けのサムネイルを作るかを選びます。左パネルの一番上「比率設定」から選択してください。</p>
+          <div class="tip">💡 <span>迷ったら <strong>16:9</strong> を選べばOK。YouTubeやnote動画など幅広く使えます。</span></div>
+        </div>
+        <div class="mock">
+          <div class="mock-title">📐 比率設定</div>
+          <div class="mock-pills">
+            <span class="mock-pill">16:9</span>
+            <span class="mock-pill">note</span>
+            <span class="mock-pill active">X記事</span>
+            <span class="mock-pill">1:1</span>
+            <span class="mock-pill">ココナラ</span>
+          </div>
+          <div class="mock-size">1200 × 480 px</div>
+        </div>
       </div>
     </div>
 
+    <!-- STEP 2 -->
     <div class="step">
-      <div class="step-line">
-        <div class="step-num">2</div>
-      </div>
+      <div class="step-line"><div class="step-num">2</div></div>
       <div class="step-content">
-        <h3>🎨 背景を設定する</h3>
-        <p>「背景設定」セクションで背景のスタイルを決めます。<strong>単色</strong>・<strong>グラデーション</strong>・<strong>画像</strong>の3種類から選べます。グラデーションは色①と色②を選ぶだけで自動的におしゃれな背景になります。</p>
-        <div class="tip">💡 <span>グラデーションの <strong>方向</strong> も変えられます。「斜め(↘)」が特にかっこよく見えやすいです。</span></div>
+        <div class="step-text">
+          <h3>✏️ テキストを入力する</h3>
+          <p>「テキスト設定」セクションでサムネイルに表示したいタイトルを入力します。改行したい場所でShiftキーを押しながらEnterキーを押すと改行されます。フォント・配置・文字サイズ・テキストカラーも自由に調整できます。</p>
+          <div class="tip">💡 <span>テキストカラーはカラーピッカーで自由に選べます。カラーコード（例：<strong>#ff6b6b</strong>）を直接入力することもできます。</span></div>
+        </div>
+        <div class="mock">
+          <div class="mock-title">✏️ テキスト設定</div>
+          <div class="mock-label">タイトル</div>
+          <textarea class="mock-textarea" rows="3" readonly>非エンジニアの私が
+サムネイルジェネレーター
+アプリを作ってみた</textarea>
+          <div class="mock-row">
+            <select class="mock-select"><option>Noto Sans JP</option></select>
+            <select class="mock-select"><option>左中央</option></select>
+          </div>
+          <div class="mock-label">文字サイズ</div>
+          <div class="mock-range-row">
+            <input type="range" class="mock-range" value="38" min="24" max="160" disabled>
+            <span class="mock-range-val">61px</span>
+          </div>
+          <div class="mock-label">テキストカラー</div>
+          <div class="mock-color-row">
+            <div class="mock-color-swatch" style="background:#ffffff;"></div>
+            <div class="mock-input">#ffffff</div>
+          </div>
+          <div class="mock-pills" style="margin-top:4px;">
+            <span class="mock-pill active">White</span>
+            <span class="mock-pill">Dark</span>
+            <span class="mock-pill">Cream</span>
+            <span class="mock-pill">Yellow</span>
+            <span class="mock-pill">Cyan</span>
+          </div>
+          <div class="mock-label" style="margin-top:6px;">テキスト影</div>
+          <div class="mock-pills">
+            <span class="mock-pill active">なし</span>
+            <span class="mock-pill">ソフト</span>
+            <span class="mock-pill">強め</span>
+          </div>
+        </div>
       </div>
     </div>
 
+    <!-- STEP 3 -->
     <div class="step">
-      <div class="step-line">
-        <div class="step-num">3</div>
-      </div>
+      <div class="step-line"><div class="step-num">3</div></div>
       <div class="step-content">
-        <h3>🔲 パターンを重ねる（任意）</h3>
-        <p>「パターン」セクションで背景の上に模様を重ねられます。<strong>ドット</strong>や<strong>グリッド</strong>を薄めに重ねるだけで、シンプルな背景がぐっとおしゃれになります。</p>
-        <div class="tip">💡 <span>透明度のスライダーを <strong>10〜20%</strong> 程度にするとさりげなくて上品な仕上がりになります。</span></div>
+        <div class="step-text">
+          <h3>🎨 背景を設定する</h3>
+          <p>「背景設定」セクションで背景のスタイルを決めます。<strong>単色</strong>・<strong>グラデーション</strong>・<strong>画像</strong>の3種類から選べます。グラデーションは色①と色②を選ぶだけで自動的におしゃれな背景になります。</p>
+          <div class="tip">💡 <span>グラデーションの <strong>方向</strong> も変えられます。「斜め(↘)」が特にかっこよく見えやすいです。</span></div>
+        </div>
+        <div class="mock">
+          <div class="mock-title">🎨 背景設定</div>
+          <div class="mock-label">背景タイプ</div>
+          <div class="mock-pills" style="margin-bottom:10px;">
+            <span class="mock-pill active">単色</span>
+            <span class="mock-pill">グラデ</span>
+            <span class="mock-pill">画像</span>
+          </div>
+          <div class="mock-label">背景色</div>
+          <div class="mock-color-row">
+            <div class="mock-color-swatch" style="background:#1a1a2e;"></div>
+            <div class="mock-input">#1a1a2e</div>
+          </div>
+        </div>
       </div>
     </div>
 
+    <!-- STEP 4 -->
     <div class="step">
-      <div class="step-line">
-        <div class="step-num">4</div>
-      </div>
+      <div class="step-line"><div class="step-num">4</div></div>
       <div class="step-content">
-        <h3>✏️ テキストを入力する</h3>
-        <p>「テキスト設定」セクションでサムネイルに表示したいタイトルを入力します。改行したい場所でEnterキーを押すとそのまま改行されます。フォント・配置・文字サイズ・テキストカラーも自由に調整できます。</p>
-        <div class="tip">💡 <span>テキストカラーはカラーピッカーで自由に選べます。カラーコード（例：<strong>#ff6b6b</strong>）を直接入力することもできます。</span></div>
+        <div class="step-text">
+          <h3>🔲 パターンを重ねる（任意）</h3>
+          <p>「パターン」セクションで背景の上に模様を重ねられます。<strong>ドット</strong>や<strong>グリッド</strong>を薄めに重ねるだけで、シンプルな背景がぐっとおしゃれになります。</p>
+          <div class="tip">💡 <span>透明度のスライダーを <strong>10〜20%</strong> 程度にするとさりげなくて上品な仕上がりになります。</span></div>
+        </div>
+        <div class="mock">
+          <div class="mock-title">🔲 パターン</div>
+          <div class="mock-pills" style="margin-bottom:10px;">
+            <span class="mock-pill">なし</span>
+            <span class="mock-pill active">ドット</span>
+            <span class="mock-pill">グリッド</span>
+          </div>
+          <div class="mock-label">透明度</div>
+          <div class="mock-range-row">
+            <input type="range" class="mock-range" value="33" min="5" max="60" disabled>
+            <span class="mock-range-val">20%</span>
+          </div>
+        </div>
       </div>
     </div>
 
+    <!-- STEP 5 -->
     <div class="step">
-      <div class="step-line">
-        <div class="step-num">5</div>
-      </div>
+      <div class="step-line"><div class="step-num">5</div></div>
       <div class="step-content">
-        <h3>🖼️ キャラクター・ロゴを配置する（任意）</h3>
-        <p>「画像オーバーレイ」セクションで自分のキャラクターやロゴ画像をサムネイルに重ねることができます。透過PNG画像（背景が透明なPNG）を使うと自然に合成されます。サイズや位置はスライダーで細かく調整できます。</p>
-        <div class="tip">💡 <span>横位置 <strong>80%・縦位置 50%</strong> あたりが右サイドに配置されてバランスよく見えます。</span></div>
+        <div class="step-text">
+          <h3>🖼️ キャラクター・ロゴを配置する（任意）</h3>
+          <p>「画像オーバーレイ」セクションで自分のキャラクターやロゴ画像をサムネイルに重ねることができます。透過PNG画像（背景が透明なPNG）を使うと自然に合成されます。サイズや位置はスライダーで細かく調整できます。</p>
+          <div class="tip">💡 <span>横位置 <strong>80%・縦位置 50%</strong> あたりが右サイドに配置されてバランスよく見えます。</span></div>
+        </div>
+        <div class="mock">
+          <div class="mock-title">🖼️ 画像オーバーレイ</div>
+          <div class="mock-upload">🐑 キャラクター・ロゴを選択<br>PNG（透過）推奨</div>
+          <div class="mock-filename">📂 白丸_背景透明.png</div>
+          <div class="mock-label">サイズ</div>
+          <div class="mock-range-row">
+            <input type="range" class="mock-range" value="59" min="10" max="90" disabled>
+            <span class="mock-range-val">63%</span>
+          </div>
+          <div class="mock-label">横位置</div>
+          <div class="mock-range-row">
+            <input type="range" class="mock-range" value="82" min="0" max="100" disabled>
+            <span class="mock-range-val">82%</span>
+          </div>
+          <div class="mock-label">縦位置</div>
+          <div class="mock-range-row">
+            <input type="range" class="mock-range" value="50" min="0" max="100" disabled>
+            <span class="mock-range-val">50%</span>
+          </div>
+        </div>
       </div>
     </div>
 
+    <!-- STEP 6 -->
     <div class="step">
-      <div class="step-line">
-        <div class="step-num">6</div>
-      </div>
+      <div class="step-line"><div class="step-num">6</div></div>
       <div class="step-content">
-        <h3>📥 PNGでダウンロードする</h3>
-        <p>右側のプレビューで仕上がりを確認したら、「ダウンロード」セクションの <strong>「📥 PNG ダウンロード」</strong> ボタンを押すだけ。選んだ比率に合った高解像度のPNGファイルが自動的に保存されます。</p>
-        <div class="tip">💡 <span>ファイル名は比率ごとに自動設定されます（例：<strong>thumbnail-note-1280x670.png</strong>）。</span></div>
+        <div class="step-text">
+          <h3>📥 PNGでダウンロードする</h3>
+          <p>右側のプレビューで仕上がりを確認したら、「ダウンロード」セクションの <strong>「📥 PNG ダウンロード」</strong> ボタンを押すだけ。選んだ比率に合った高解像度のPNGファイルが自動的に保存されます。</p>
+          <div class="tip">💡 <span>ファイル名は比率ごとに自動設定されます（例：<strong>thumbnail-note-1280x670.png</strong>）。</span></div>
+        </div>
+        <div class="mock">
+          <div class="mock-title">📥 ダウンロード</div>
+          <div class="mock-btn-green">📥 PNG ダウンロード</div>
+          <div class="mock-hint">高解像度PNGで出力されます</div>
+        </div>
       </div>
     </div>
 
@@ -398,7 +572,7 @@
 
       <div class="faq-item">
         <div class="faq-q">テキストが画像からはみ出てしまいます</div>
-        <div class="faq-a">文字サイズのスライダーを小さくするか、テキストを短くするか、改行を入れて調整してください。プレビューを見ながらリアルタイムで確認できます。</div>
+        <div class="faq-a">文字サイズのスライダーを小さくするか、テキストを短くするか、改行を入れて調整してください。改行はShiftキーを押しながらEnterキーを押します。プレビューを見ながらリアルタイムで確認できます。</div>
       </div>
 
       <div class="faq-item">
@@ -427,6 +601,19 @@
   <!-- ===== OPEN BTN ===== -->
   <div class="open-btn-wrap">
     <a href="thumbnail-generator.html" class="open-btn">🎨 さっそく作ってみる</a>
+  </div>
+
+  <!-- ===== CREDIT ===== -->
+  <div style="text-align:center; padding: 32px 0 8px;">
+    <p style="font-size:15px; color:#555;">
+      This app was created by <strong style="color:#1e1e2e;">あこ</strong>
+    </p>
+    <a href="https://x.com/aco08AI" target="_blank" rel="noopener"
+       style="display:inline-flex; align-items:center; gap:6px; margin-top:10px;
+              color:#6c63ff; font-size:14px; font-weight:700; text-decoration:none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      @aco08AI
+    </a>
   </div>
 
 </div><!-- /container -->
