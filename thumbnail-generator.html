@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サムネイルジェネレーター</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* html と body 両方に height:100% が必要 */
+  html { height: 100%; }
+  body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #0f0f13;
+    color: #e8e8f0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ヘッダー：縮まない固定高さ */
+  header {
+    flex: 0 0 auto;
+    background: #1a1a24;
+    border-bottom: 1px solid #2a2a3a;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 17px; font-weight: 700; }
+  header span { font-size: 12px; color: #888; background: #2a2a3a; padding: 2px 8px; border-radius: 99px; }
+
+  /* メインエリア：残りの高さをすべて使い、はみ出しは hidden */
+  .app {
+    flex: 1 1 0;    /* grow=1, shrink=1, basis=0 が重要 */
+    min-height: 0;  /* flexアイテムがコンテンツ高さより縮めるようにする */
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* 左パネル：固定幅・縦スクロール可 */
+  .panel {
+    flex: 0 0 300px;
+    min-height: 0;
+    overflow-y: scroll; /* auto ではなく scroll で確実にスクロールバーを出す */
+    background: #1a1a24;
+    border-right: 1px solid #2a2a3a;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .panel::-webkit-scrollbar { width: 6px; }
+  .panel::-webkit-scrollbar-track { background: #1a1a24; }
+  .panel::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+  /* 右プレビュー：残り全幅・スクロールなし */
+  .preview-area {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: #0f0f13;
+    gap: 14px;
+  }
+
+  /* ======= セクション ======= */
+  .section {
+    background: #22222e;
+    border: 1px solid #2e2e3e;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0; /* パネル内でセクションが潰れないように */
+  }
+  .section-header {
+    padding: 10px 14px;
+    font-size: 12px; font-weight: 600; color: #aaa;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid #2e2e3e;
+    background: #1e1e2a;
+    cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    user-select: none;
+  }
+  .section-header:hover { background: #252535; }
+  .section-header .arrow { font-size: 10px; transition: transform 0.2s; }
+  .section-header.collapsed .arrow { transform: rotate(-90deg); }
+  .section-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .section-body.hidden { display: none; }
+
+  /* ======= フォーム部品 ======= */
+  label { font-size: 12px; color: #999; display: block; margin-bottom: 4px; }
+  input[type="text"], select, textarea {
+    width: 100%; background: #16161f; border: 1px solid #333;
+    border-radius: 6px; color: #e8e8f0; font-size: 13px;
+    padding: 7px 10px; outline: none; transition: border 0.2s; font-family: inherit;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { border-color: #6c63ff; }
+  textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+  select option { background: #1a1a24; }
+
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+
+  input[type="range"] { width: 100%; accent-color: #6c63ff; cursor: pointer; }
+  .range-row { display: flex; align-items: center; gap: 8px; }
+  .range-row input[type="range"] { flex: 1; }
+  .range-val {
+    font-size: 12px; color: #aaa; min-width: 36px; text-align: right;
+    background: #16161f; border: 1px solid #333; border-radius: 4px; padding: 2px 5px;
+  }
+
+  .color-row { display: flex; align-items: center; gap: 8px; }
+  .color-row input[type="color"] {
+    width: 36px; height: 32px; padding: 2px; border: 1px solid #333;
+    border-radius: 6px; background: #16161f; cursor: pointer; flex-shrink: 0;
+  }
+  .color-row input[type="text"] { flex: 1; }
+
+  .btn {
+    width: 100%; padding: 9px 14px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .btn-secondary { background: #2a2a3a; color: #ccc; border: 1px solid #333; }
+  .btn-secondary:hover { background: #333; }
+  .btn-success { background: #22c55e; color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+
+  .radio-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .radio-pill input { display: none; }
+  .radio-pill label {
+    padding: 5px 11px; border-radius: 99px; font-size: 12px; font-weight: 500;
+    border: 1px solid #333; cursor: pointer; background: #16161f; color: #aaa; margin: 0;
+    display: block; transition: all 0.15s;
+  }
+  .radio-pill input:checked + label { background: #6c63ff; border-color: #6c63ff; color: #fff; }
+
+  .upload-area {
+    border: 2px dashed #333; border-radius: 8px; padding: 14px;
+    text-align: center; cursor: pointer; font-size: 12px; color: #666; transition: all 0.2s;
+  }
+  .upload-area:hover { border-color: #6c63ff; color: #aaa; }
+  .upload-area input { display: none; }
+
+  /* ======= Canvas ======= */
+  .canvas-wrap { box-shadow: 0 8px 40px rgba(0,0,0,0.6); border-radius: 4px; overflow: hidden; max-width: 100%; }
+  canvas { display: block; max-width: 100%; }
+  .size-label { font-size: 12px; color: #555; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎨 サムネイルジェネレーター</h1>
+  <span>Powered by Canvas API</span>
+</header>
+
+<div class="app">
+
+  <!-- ===== 左パネル ===== -->
+  <div class="panel">
+
+    <!-- 比率 -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">📐 比率設定 <span class="arrow">▼</span></div>
+      <div class="section-body">
+        <div class="radio-group">
+          <div class="radio-pill"><input type="radio" name="ratio" id="r169" value="169" checked><label for="r169">16:9</label></div>
+          <div class="radio-pill"><input type="radio" name="ratio" id="rnote" value="note"><label for="rnote">note</label></div>
+          <div class="radio-pill"><input type="radio" name="ratio" id="r52" value="52"><label for="r52">X記事</label></div>
+          <div class="radio-pill"><input type="radio" name="ratio" id="r11" value="11"><label for="r11">1:1</label></div>
+          <div class="radio-pill"><input type="radio" name="ratio" id="rcocona" value="cocona"><label for="rcocona">ココナラ</label></div>
+        </div>
+        <div class="size-label" id="sizeLabel">1920 × 1080 px</div>
+      </div>
+    </div>
+
+    <!-- テキスト -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">✏️ テキスト設定 <span class="arrow">▼</span></div>
+      <div class="section-body">
+        <div>
+          <label>タイトル</label>
+          <textarea id="titleText" rows="3" placeholder="タイトルを入力…">サムネイルジェネレーター</textarea>
+        </div>
+        <div class="row">
+          <div>
+            <label>フォント</label>
+            <select id="fontFamily">
+              <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
+              <option value="'M PLUS Rounded 1c', sans-serif">M PLUS Rounded</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="Impact, sans-serif">Impact</option>
+            </select>
+          </div>
+          <div>
+            <label>配置</label>
+            <select id="textAlign">
+              <option value="top-left">左上</option>
+              <option value="top-center">上中央</option>
+              <option value="top-right">右上</option>
+              <option value="middle-left">左中央</option>
+              <option value="middle-center" selected>中央</option>
+              <option value="middle-right">右中央</option>
+              <option value="bottom-left">左下</option>
+              <option value="bottom-center">下中央</option>
+              <option value="bottom-right">右下</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label>文字サイズ</label>
+          <div class="range-row">
+            <input type="range" id="fontSize" min="24" max="160" value="72">
+            <span class="range-val" id="fontSizeDisplay">72px</span>
+          </div>
+        </div>
+        <div>
+          <label>テキストカラー</label>
+          <div class="color-row">
+            <input type="color" id="textColorPicker" value="#ffffff">
+            <input type="text" id="textColorHex" value="#ffffff" placeholder="#rrggbb" maxlength="7">
+          </div>
+          <div class="radio-group" style="margin-top:6px;">
+            <div class="radio-pill"><input type="radio" name="textColorPreset" id="tcWhite" value="#ffffff" checked><label for="tcWhite">White</label></div>
+            <div class="radio-pill"><input type="radio" name="textColorPreset" id="tcDark" value="#1a1a1a"><label for="tcDark">Dark</label></div>
+            <div class="radio-pill"><input type="radio" name="textColorPreset" id="tcCream" value="#fdf6e3"><label for="tcCream">Cream</label></div>
+            <div class="radio-pill"><input type="radio" name="textColorPreset" id="tcYellow" value="#fbbf24"><label for="tcYellow">Yellow</label></div>
+            <div class="radio-pill"><input type="radio" name="textColorPreset" id="tcCyan" value="#22d3ee"><label for="tcCyan">Cyan</label></div>
+          </div>
+        </div>
+        <div>
+          <label>テキスト影</label>
+          <div class="radio-group">
+            <div class="radio-pill"><input type="radio" name="textShadow" id="tsNone" value="none" checked><label for="tsNone">なし</label></div>
+            <div class="radio-pill"><input type="radio" name="textShadow" id="tsLight" value="light"><label for="tsLight">ソフト</label></div>
+            <div class="radio-pill"><input type="radio" name="textShadow" id="tsStrong" value="strong"><label for="tsStrong">強め</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 背景 -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">🎨 背景設定 <span class="arrow">▼</span></div>
+      <div class="section-body">
+        <div>
+          <label>背景タイプ</label>
+          <div class="radio-group">
+            <div class="radio-pill"><input type="radio" name="bgType" id="bgSolid" value="solid" checked><label for="bgSolid">単色</label></div>
+            <div class="radio-pill"><input type="radio" name="bgType" id="bgGradient" value="gradient"><label for="bgGradient">グラデ</label></div>
+            <div class="radio-pill"><input type="radio" name="bgType" id="bgImage" value="image"><label for="bgImage">画像</label></div>
+          </div>
+        </div>
+        <div id="solidBgArea">
+          <label>背景色</label>
+          <div class="color-row">
+            <input type="color" id="bgColor" value="#1a1a2e">
+            <input type="text" id="bgColorHex" value="#1a1a2e" placeholder="#rrggbb">
+          </div>
+        </div>
+        <div id="gradBgArea" style="display:none;">
+          <div class="row">
+            <div><label>色①</label><input type="color" id="gradColor1" value="#6c63ff"></div>
+            <div><label>色②</label><input type="color" id="gradColor2" value="#f093fb"></div>
+          </div>
+          <div style="margin-top:8px;">
+            <label>方向</label>
+            <select id="gradDir">
+              <option value="lr">左→右</option>
+              <option value="tb">上→下</option>
+              <option value="tl">斜め(↘)</option>
+              <option value="tr">斜め(↙)</option>
+            </select>
+          </div>
+        </div>
+        <div id="imgBgArea" style="display:none;">
+          <div class="upload-area" onclick="document.getElementById('bgImageFile').click()">
+            <input type="file" id="bgImageFile" accept="image/*">
+            🖼️ クリックして背景画像を選択<br><span style="font-size:11px;">PNG / JPG</span>
+          </div>
+          <div id="bgImgName" style="font-size:11px;color:#666;margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- パターン -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">🔲 パターン <span class="arrow">▼</span></div>
+      <div class="section-body">
+        <div class="radio-group">
+          <div class="radio-pill"><input type="radio" name="pattern" id="pNone" value="none"><label for="pNone">なし</label></div>
+          <div class="radio-pill"><input type="radio" name="pattern" id="pDot" value="dot" checked><label for="pDot">ドット</label></div>
+          <div class="radio-pill"><input type="radio" name="pattern" id="pGrid" value="grid"><label for="pGrid">グリッド</label></div>
+        </div>
+        <div>
+          <label>透明度</label>
+          <div class="range-row">
+            <input type="range" id="patternOpacity" min="5" max="60" value="20">
+            <span class="range-val" id="patternOpacityDisplay">20%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- オーバーレイ -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">🖼️ 画像オーバーレイ <span class="arrow">▼</span></div>
+      <div class="section-body">
+        <div class="upload-area" onclick="document.getElementById('overlayFile').click()">
+          <input type="file" id="overlayFile" accept="image/*">
+          🐑 キャラクター・ロゴを選択<br><span style="font-size:11px;">PNG（透過）推奨</span>
+        </div>
+        <div id="overlayName" style="font-size:11px;color:#666;"></div>
+        <div id="overlayControls" style="display:none; display:flex; flex-direction:column; gap:8px;">
+          <div>
+            <label>サイズ</label>
+            <div class="range-row">
+              <input type="range" id="overlaySize" min="10" max="90" value="40">
+              <span class="range-val" id="overlaySizeDisplay">40%</span>
+            </div>
+          </div>
+          <div>
+            <label>横位置</label>
+            <div class="range-row">
+              <input type="range" id="overlayX" min="0" max="100" value="80">
+              <span class="range-val" id="overlayXDisplay">80%</span>
+            </div>
+          </div>
+          <div>
+            <label>縦位置</label>
+            <div class="range-row">
+              <input type="range" id="overlayY" min="0" max="100" value="50">
+              <span class="range-val" id="overlayYDisplay">50%</span>
+            </div>
+          </div>
+          <button class="btn btn-secondary" onclick="clearOverlay()">🗑 画像を削除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ダウンロード -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">📥 ダウンロード <span class="arrow">▼</span></div>
+      <div class="section-body">
+        <button class="btn btn-success" onclick="downloadPNG()">📥 PNG ダウンロード</button>
+        <div id="downloadHint" style="font-size:11px;color:#555;text-align:center;">高解像度PNGで出力されます</div>
+      </div>
+    </div>
+
+  </div><!-- /panel -->
+
+  <!-- ===== 右プレビュー ===== -->
+  <div class="preview-area">
+    <div class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </div>
+    <span class="size-label" id="previewSizeLabel">1920 × 1080 px</span>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ======================== STATE ========================
+const S = {
+  ratio: '169', titleText: 'サムネイルジェネレーター',
+  fontFamily: "'Noto Sans JP', sans-serif", textAlign: 'middle-center',
+  fontSize: 72, textColor: '#ffffff', textShadow: 'none',
+  bgType: 'solid', bgColor: '#1a1a2e',
+  gradColor1: '#6c63ff', gradColor2: '#f093fb', gradDir: 'lr',
+  pattern: 'dot', patternOpacity: 20,
+  overlayImg: null, overlaySize: 40, overlayX: 80, overlayY: 50,
+  bgImageObj: null,
+};
+const SIZES = { '169': [1920,1080], 'note': [1280,670], '52': [1200,480], '11': [800,800], 'cocona': [1220,1240] };
+
+// ======================== CANVAS ========================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function initCanvas() {
+  const [w, h] = SIZES[S.ratio];
+  canvas.width = w; canvas.height = h;
+  const previewW = document.querySelector('.preview-area').clientWidth  - 56;
+  const previewH = document.querySelector('.preview-area').clientHeight - 56;
+  const scale = Math.min(previewW / w, previewH / h, 1);
+  canvas.style.width  = Math.round(w * scale) + 'px';
+  canvas.style.height = Math.round(h * scale) + 'px';
+  document.getElementById('previewSizeLabel').textContent = `${w} × ${h} px`;
+  document.getElementById('sizeLabel').textContent = `${w} × ${h} px`;
+}
+
+function draw() {
+  const [w,h] = SIZES[S.ratio];
+  ctx.clearRect(0,0,w,h);
+  // 背景
+  if (S.bgType === 'solid') {
+    ctx.fillStyle = S.bgColor; ctx.fillRect(0,0,w,h);
+  } else if (S.bgType === 'gradient') {
+    const dirs = { lr:[0,0,w,0], tb:[0,0,0,h], tl:[0,0,w,h], tr:[w,0,0,h] };
+    const g = ctx.createLinearGradient(...dirs[S.gradDir]);
+    g.addColorStop(0, S.gradColor1); g.addColorStop(1, S.gradColor2);
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  } else if (S.bgType === 'image' && S.bgImageObj) {
+    const img = S.bgImageObj;
+    const sc = Math.max(w/img.width, h/img.height);
+    ctx.drawImage(img, (w-img.width*sc)/2, (h-img.height*sc)/2, img.width*sc, img.height*sc);
+  } else {
+    ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0,0,w,h);
+  }
+  // パターン
+  if (S.pattern !== 'none') {
+    ctx.save(); ctx.globalAlpha = S.patternOpacity / 100;
+    if (S.pattern === 'dot') {
+      ctx.fillStyle = '#fff';
+      for (let x=16; x<w; x+=32) for (let y=16; y<h; y+=32) {
+        ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fill();
+      }
+    } else if (S.pattern === 'grid') {
+      ctx.strokeStyle='#fff'; ctx.lineWidth=0.8;
+      for (let x=0; x<=w; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+      for (let y=0; y<=h; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+    } else if (S.pattern === 'noise') {
+      const d = ctx.createImageData(w,h);
+      for (let i=0; i<d.data.length; i+=4) {
+        const v=Math.random()>0.5?255:0; d.data[i]=v; d.data[i+1]=v; d.data[i+2]=v; d.data[i+3]=Math.random()*80;
+      }
+      ctx.putImageData(d,0,0);
+    }
+    ctx.restore();
+  }
+  // オーバーレイ画像
+  if (S.overlayImg) {
+    const img = S.overlayImg;
+    const sz = (S.overlaySize/100) * Math.min(w,h);
+    const dw = sz * (img.width/img.height), dh = sz;
+    ctx.drawImage(img, (S.overlayX/100)*w - dw/2, (S.overlayY/100)*h - dh/2, dw, dh);
+  }
+  // テキスト
+  const text = S.titleText.trim();
+  if (text) {
+    ctx.font = `700 ${S.fontSize}px ${S.fontFamily}`;
+    ctx.fillStyle = S.textColor;
+    ctx.textBaseline = 'middle';
+    const shadows = { none:[0,0,'transparent'], light:[2,2,12,'rgba(0,0,0,.4)'], strong:[3,3,20,'rgba(0,0,0,.8)'] };
+    const sh = shadows[S.textShadow] || shadows.none;
+    ctx.shadowOffsetX=sh[0]; ctx.shadowOffsetY=sh[1]; ctx.shadowBlur=sh[2]||0; ctx.shadowColor=sh[3]||'transparent';
+    const lines = text.split('\n');
+    const lh = S.fontSize * 1.4;
+    const [va,ha] = S.textAlign.split('-');
+    const pad = 60;
+    let ax = ha==='left'?pad : ha==='right'?w-pad : w/2;
+    ctx.textAlign = ha==='left'?'left' : ha==='right'?'right' : 'center';
+    let ay = va==='top'? pad+S.fontSize/2 : va==='bottom'? h-pad-lines.length*lh+lh/2 : (h-lines.length*lh)/2+lh/2;
+    lines.forEach((ln,i) => ctx.fillText(ln, ax, ay+i*lh));
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+  }
+}
+
+// ======================== CONTROLS ========================
+function on(id, ev, fn) { const el=document.getElementById(id); if(el) el.addEventListener(ev,fn); }
+function setRange(id, dispId, prop, suffix='') {
+  on(id,'input',function(){ S[prop]=+this.value; document.getElementById(dispId).textContent=this.value+suffix; draw(); });
+}
+
+// 比率
+document.querySelectorAll('input[name="ratio"]').forEach(el=>el.addEventListener('change',()=>{ S.ratio=el.value; initCanvas(); draw(); }));
+// テキスト
+on('titleText','input',function(){ S.titleText=this.value; draw(); });
+on('fontFamily','input',function(){ S.fontFamily=this.value; draw(); });
+on('textAlign','input',function(){ S.textAlign=this.value; draw(); });
+setRange('fontSize','fontSizeDisplay','fontSize','px');
+// テキストカラー：カラーピッカー
+function applyTextColor(hex) {
+  S.textColor = hex;
+  document.getElementById('textColorPicker').value = hex;
+  document.getElementById('textColorHex').value = hex;
+  draw();
+}
+on('textColorPicker','input',function(){ applyTextColor(this.value); });
+on('textColorHex','input',function(){
+  if(/^#[0-9a-fA-F]{6}$/.test(this.value)){ applyTextColor(this.value); }
+});
+document.querySelectorAll('input[name="textColorPreset"]').forEach(el=>el.addEventListener('change',()=>{ applyTextColor(el.value); }));
+document.querySelectorAll('input[name="textShadow"]').forEach(el=>el.addEventListener('change',()=>{ S.textShadow=el.value; draw(); }));
+// 背景タイプ
+document.querySelectorAll('input[name="bgType"]').forEach(el=>el.addEventListener('change',()=>{
+  S.bgType=el.value;
+  document.getElementById('solidBgArea').style.display = el.value==='solid'?'':'none';
+  document.getElementById('gradBgArea').style.display  = el.value==='gradient'?'':'none';
+  document.getElementById('imgBgArea').style.display   = el.value==='image'?'':'none';
+  draw();
+}));
+// 背景色
+on('bgColor','input',function(){ S.bgColor=this.value; document.getElementById('bgColorHex').value=this.value; draw(); });
+on('bgColorHex','input',function(){ if(/^#[0-9a-fA-F]{6}$/.test(this.value)){ S.bgColor=this.value; document.getElementById('bgColor').value=this.value; draw(); } });
+on('gradColor1','input',function(){ S.gradColor1=this.value; draw(); });
+on('gradColor2','input',function(){ S.gradColor2=this.value; draw(); });
+on('gradDir','input',function(){ S.gradDir=this.value; draw(); });
+on('bgImageFile','change',function(){
+  if(!this.files[0]) return;
+  const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{ S.bgImageObj=img; draw(); }; img.src=ev.target.result; };
+  r.readAsDataURL(this.files[0]);
+  document.getElementById('bgImgName').textContent='📂 '+this.files[0].name;
+});
+// パターン
+document.querySelectorAll('input[name="pattern"]').forEach(el=>el.addEventListener('change',()=>{ S.pattern=el.value; draw(); }));
+setRange('patternOpacity','patternOpacityDisplay','patternOpacity','%');
+// オーバーレイ
+on('overlayFile','change',function(){
+  if(!this.files[0]) return;
+  const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{ S.overlayImg=img; document.getElementById('overlayControls').style.display='flex'; draw(); }; img.src=ev.target.result; };
+  r.readAsDataURL(this.files[0]);
+  document.getElementById('overlayName').textContent='📂 '+this.files[0].name;
+});
+setRange('overlaySize','overlaySizeDisplay','overlaySize','%');
+setRange('overlayX','overlayXDisplay','overlayX','%');
+setRange('overlayY','overlayYDisplay','overlayY','%');
+function clearOverlay(){ S.overlayImg=null; document.getElementById('overlayFile').value=''; document.getElementById('overlayName').textContent=''; document.getElementById('overlayControls').style.display='none'; draw(); }
+
+// ======================== DOWNLOAD ========================
+function downloadPNG(){
+  const names={'169':'thumbnail-1920x1080','note':'thumbnail-note-1280x670','52':'thumbnail-1200x480','11':'thumbnail-800x800','cocona':'thumbnail-coconala-1220x1240'};
+  const a=document.createElement('a'); a.download=names[S.ratio]+'.png'; a.href=canvas.toDataURL('image/png'); a.click();
+  const hint=document.getElementById('downloadHint'); hint.textContent='✅ ダウンロード完了！';
+  setTimeout(()=>hint.textContent='高解像度PNGで出力されます',2000);
+}
+
+// ======================== SECTION TOGGLE ========================
+function toggleSection(h){ h.classList.toggle('collapsed'); h.nextElementSibling.classList.toggle('hidden'); }
+
+// ======================== FONTS ========================
+const lnk=document.createElement('link'); lnk.rel='stylesheet';
+lnk.href='https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&family=M+PLUS+Rounded+1c:wght@700&display=swap';
+document.head.appendChild(lnk);
+
+// ======================== INIT ========================
+initCanvas(); draw();
+window.addEventListener('resize', ()=>{ initCanvas(); draw(); });
+</script>
+</body>
+</html>
