@@ -7,7 +7,6 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* html と body 両方に height:100% が必要 */
   html { height: 100%; }
   body {
     height: 100%;
@@ -19,7 +18,6 @@
     flex-direction: column;
   }
 
-  /* ヘッダー：縮まない固定高さ */
   header {
     flex: 0 0 auto;
     background: #1a1a24;
@@ -39,19 +37,17 @@
   }
   .btn-reset:hover { background: #3a2020; border-color: #c55; color: #ff9090; }
 
-  /* メインエリア：残りの高さをすべて使い、はみ出しは hidden */
   .app {
-    flex: 1 1 0;    /* grow=1, shrink=1, basis=0 が重要 */
-    min-height: 0;  /* flexアイテムがコンテンツ高さより縮めるようにする */
+    flex: 1 1 0;
+    min-height: 0;
     display: flex;
     overflow: hidden;
   }
 
-  /* 左パネル：固定幅・縦スクロール可 */
   .panel {
-    flex: 0 0 300px;
+    flex: 0 0 310px;
     min-height: 0;
-    overflow-y: scroll; /* auto ではなく scroll で確実にスクロールバーを出す */
+    overflow-y: scroll;
     background: #1a1a24;
     border-right: 1px solid #2a2a3a;
     padding: 14px;
@@ -63,18 +59,55 @@
   .panel::-webkit-scrollbar-track { background: #1a1a24; }
   .panel::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
 
-  /* 右プレビュー：残り全幅・スクロールなし */
   .preview-area {
     flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+    background: #0f0f13;
+    gap: 0;
+  }
+  /* ズームバー（上部固定） */
+  .zoom-bar {
+    flex: 0 0 auto;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 28px;
-    background: #0f0f13;
-    gap: 14px;
+    gap: 10px;
+    padding: 8px 20px;
+    background: #15151e;
+    border-bottom: 1px solid #2a2a3a;
+  }
+  .zoom-btn {
+    background: #2a2a3a; border: 1px solid #333; color: #aaa;
+    border-radius: 6px; width: 28px; height: 28px; cursor: pointer;
+    font-size: 18px; line-height: 1; font-weight: 700; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .zoom-btn:hover { background: #3a3a4a; color: #fff; }
+  #zoomDisplay { font-size: 12px; color: #888; min-width: 42px; text-align:center; }
+  .zoom-hint { font-size: 11px; color: #444; }
+  /* キャンバスのスクロール領域 */
+  .canvas-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    padding: 24px;
+  }
+  .canvas-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .canvas-scroll::-webkit-scrollbar-track { background: #0f0f13; }
+  .canvas-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  /* プレビュー下部ラベル */
+  .preview-footer {
+    flex: 0 0 auto;
+    text-align: center;
+    padding: 6px;
+    font-size: 12px;
+    color: #444;
   }
 
   /* ======= セクション ======= */
@@ -83,7 +116,7 @@
     border: 1px solid #2e2e3e;
     border-radius: 10px;
     overflow: hidden;
-    flex-shrink: 0; /* パネル内でセクションが潰れないように */
+    flex-shrink: 0;
   }
   .section-header {
     padding: 10px 14px;
@@ -119,7 +152,7 @@
   .range-row { display: flex; align-items: center; gap: 8px; }
   .range-row input[type="range"] { flex: 1; }
   .range-val {
-    font-size: 12px; color: #aaa; min-width: 36px; text-align: right;
+    font-size: 12px; color: #aaa; min-width: 42px; text-align: right;
     background: #16161f; border: 1px solid #333; border-radius: 4px; padding: 2px 5px;
   }
 
@@ -156,9 +189,12 @@
   .upload-area input { display: none; }
 
   /* ======= Canvas ======= */
-  .canvas-wrap { box-shadow: 0 8px 40px rgba(0,0,0,0.6); border-radius: 4px; overflow: hidden; max-width: 100%; }
-  canvas { display: block; max-width: 100%; }
+  .canvas-wrap { box-shadow: 0 8px 40px rgba(0,0,0,0.6); border-radius: 4px; overflow: hidden; flex-shrink: 0; margin: auto; }
+  canvas { display: block; }
   .size-label { font-size: 12px; color: #555; }
+
+  /* ======= テキストスタイルヒント ======= */
+  .style-hint { font-size: 11px; color: #555; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -197,38 +233,72 @@
           <label>タイトル</label>
           <textarea id="titleText" rows="3" placeholder="タイトルを入力…">サムネイルジェネレーター</textarea>
         </div>
-        <div class="row">
-          <div>
-            <label>フォント</label>
-            <select id="fontFamily">
-              <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
-              <option value="'M PLUS Rounded 1c', sans-serif">M PLUS Rounded</option>
-              <option value="Georgia, serif">Georgia</option>
-              <option value="Impact, sans-serif">Impact</option>
-            </select>
-          </div>
-          <div>
-            <label>配置</label>
-            <select id="textAlign">
-              <option value="top-left">左上</option>
-              <option value="top-center">上中央</option>
-              <option value="top-right">右上</option>
-              <option value="middle-left">左中央</option>
-              <option value="middle-center" selected>中央</option>
-              <option value="middle-right">右中央</option>
-              <option value="bottom-left">左下</option>
-              <option value="bottom-center">下中央</option>
-              <option value="bottom-right">右下</option>
-            </select>
+        <div>
+          <label>フォント</label>
+          <select id="fontFamily">
+            <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
+            <option value="'M PLUS Rounded 1c', sans-serif">M PLUS Rounded（丸ゴシック）</option>
+            <option value="'Zen Kaku Gothic New', sans-serif">Zen Kaku Gothic（極太角ゴシック）</option>
+            <option value="'Rampart One', sans-serif">Rampart One（3D立体風）</option>
+            <option value="'Cherry Bomb One', cursive">Cherry Bomb One（丸み3D・シャドーB向き）</option>
+            <option value="'Kosugi Maru', sans-serif">Kosugi Maru（丸ゴシック）</option>
+            <option value="'Kaisei Decol', serif">Kaisei Decol（装飾明朝）</option>
+            <option value="Georgia, serif">Georgia</option>
+          </select>
+        </div>
+        <!-- 文字揃え -->
+        <div>
+          <label>文字揃え</label>
+          <div class="radio-group">
+            <div class="radio-pill"><input type="radio" name="hAlign" id="haLeft" value="left"><label for="haLeft">左揃え</label></div>
+            <div class="radio-pill"><input type="radio" name="hAlign" id="haCenter" value="center" checked><label for="haCenter">中央揃え</label></div>
+            <div class="radio-pill"><input type="radio" name="hAlign" id="haRight" value="right"><label for="haRight">右揃え</label></div>
           </div>
         </div>
+        <!-- 文字サイズ（横位置の上） -->
         <div>
           <label>文字サイズ</label>
           <div class="range-row">
-            <input type="range" id="fontSize" min="24" max="160" value="72">
+            <input type="range" id="fontSize" min="24" max="240" value="72">
             <span class="range-val" id="fontSizeDisplay">72px</span>
           </div>
         </div>
+        <!-- 横位置 -->
+        <div>
+          <label>横位置</label>
+          <div class="range-row">
+            <input type="range" id="textX" min="0" max="100" value="50">
+            <span class="range-val" id="textXDisplay">50%</span>
+          </div>
+        </div>
+        <!-- 縦位置 -->
+        <div>
+          <label>縦位置</label>
+          <div class="range-row">
+            <input type="range" id="textY" min="0" max="100" value="50">
+            <span class="range-val" id="textYDisplay">50%</span>
+          </div>
+        </div>
+        <!-- 行間 -->
+        <div>
+          <label>行間</label>
+          <div class="range-row">
+            <input type="range" id="lineHeight" min="0.8" max="3.0" step="0.1" value="1.4">
+            <span class="range-val" id="lineHeightDisplay">1.4</span>
+          </div>
+        </div>
+        <!-- テキストスタイル -->
+        <div>
+          <label>テキストスタイル</label>
+          <div class="radio-group">
+            <div class="radio-pill"><input type="radio" name="textEffect" id="teNormal" value="normal" checked><label for="teNormal">通常</label></div>
+            <div class="radio-pill"><input type="radio" name="textEffect" id="teOutline" value="outline"><label for="teOutline">アウトライン</label></div>
+            <div class="radio-pill"><input type="radio" name="textEffect" id="teEmboss" value="emboss"><label for="teEmboss">エンボス3D</label></div>
+            <div class="radio-pill"><input type="radio" name="textEffect" id="teShadowB" value="shadowB"><label for="teShadowB">シャドーB</label></div>
+          </div>
+          <div class="style-hint" id="styleHint">通常：影設定が有効です</div>
+        </div>
+        <!-- テキストカラー -->
         <div>
           <label>テキストカラー</label>
           <div class="color-row">
@@ -243,8 +313,9 @@
             <div class="radio-pill"><input type="radio" name="textColorPreset" id="tcCyan" value="#22d3ee"><label for="tcCyan">Cyan</label></div>
           </div>
         </div>
+        <!-- テキスト影（通常モード時のみ有効） -->
         <div>
-          <label>テキスト影</label>
+          <label>テキスト影（通常モード時）</label>
           <div class="radio-group">
             <div class="radio-pill"><input type="radio" name="textShadow" id="tsNone" value="none" checked><label for="tsNone">なし</label></div>
             <div class="radio-pill"><input type="radio" name="textShadow" id="tsLight" value="light"><label for="tsLight">ソフト</label></div>
@@ -323,28 +394,49 @@
       <div class="section-body">
         <div class="upload-area" onclick="document.getElementById('overlayFile').click()">
           <input type="file" id="overlayFile" accept="image/*">
-          🐑 キャラクター・ロゴを選択<br><span style="font-size:11px;">PNG（透過）推奨</span>
+          🐑 キャラクター・ロゴを選択<br>
+          <span style="font-size:11px;">PNG（背景透過）推奨</span>
         </div>
         <div id="overlayName" style="font-size:11px;color:#666;"></div>
-        <div id="overlayControls" style="display:none; display:flex; flex-direction:column; gap:8px;">
+        <div id="overlayControls" style="display:none; flex-direction:column; gap:8px;">
+
+          <!-- ✂️ 背景透過 -->
+          <div style="background:#1a1a2e; border:1px solid #2e2e3e; border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:8px;">
+            <div style="font-size:11px; font-weight:600; color:#aaa; letter-spacing:0.05em;">✂️ 背景透過</div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary" id="removeBgBtn" onclick="removeBg()" style="flex:1; padding:8px 10px; font-size:12px;">✂️ 背景を透過</button>
+              <button class="btn btn-secondary" id="restoreBgBtn" onclick="restoreOriginal()" style="display:none; flex:0 0 auto; padding:8px 10px; font-size:11px;">↩ 元に戻す</button>
+            </div>
+            <div>
+              <label>許容範囲（広いほど多く除去）</label>
+              <div class="range-row">
+                <input type="range" id="bgTolerance" min="5" max="150" value="30">
+                <span class="range-val" id="bgToleranceDisplay">30</span>
+              </div>
+            </div>
+            <div id="removeBgStatus" style="font-size:11px; color:#666; text-align:center; min-height:14px;"></div>
+          </div>
+
+          <div style="border-top:1px solid #2e2e3e; margin: 2px 0;"></div>
+
           <div>
-            <label>サイズ</label>
+            <label>サイズ（キャンバス短辺比）</label>
             <div class="range-row">
-              <input type="range" id="overlaySize" min="10" max="90" value="40">
+              <input type="range" id="overlaySize" min="10" max="300" value="40">
               <span class="range-val" id="overlaySizeDisplay">40%</span>
             </div>
           </div>
           <div>
-            <label>横位置</label>
+            <label>横位置（キャンバス外も可）</label>
             <div class="range-row">
-              <input type="range" id="overlayX" min="0" max="100" value="80">
+              <input type="range" id="overlayX" min="-50" max="150" value="80">
               <span class="range-val" id="overlayXDisplay">80%</span>
             </div>
           </div>
           <div>
-            <label>縦位置</label>
+            <label>縦位置（キャンバス外も可）</label>
             <div class="range-row">
-              <input type="range" id="overlayY" min="0" max="100" value="50">
+              <input type="range" id="overlayY" min="-50" max="150" value="50">
               <span class="range-val" id="overlayYDisplay">50%</span>
             </div>
           </div>
@@ -366,10 +458,21 @@
 
   <!-- ===== 右プレビュー ===== -->
   <div class="preview-area">
-    <div class="canvas-wrap">
-      <canvas id="canvas"></canvas>
+    <!-- ズームコントロール -->
+    <div class="zoom-bar">
+      <button class="zoom-btn" onclick="changeZoom(-25)">−</button>
+      <span id="zoomDisplay">100%</span>
+      <button class="zoom-btn" onclick="changeZoom(+25)">+</button>
+      <span class="zoom-hint">プレビューズーム</span>
+      <button class="zoom-btn" onclick="resetZoom()" style="font-size:11px; width:auto; padding:0 8px; margin-left:4px;">Fit</button>
     </div>
-    <span class="size-label" id="previewSizeLabel">1920 × 1080 px</span>
+    <!-- スクロール可能なキャンバス領域 -->
+    <div class="canvas-scroll" id="canvasScroll">
+      <div class="canvas-wrap">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+    <div class="preview-footer" id="previewSizeLabel">1920 × 1080 px</div>
   </div>
 
 </div><!-- /app -->
@@ -377,13 +480,21 @@
 <script>
 // ======================== STATE ========================
 const S = {
-  ratio: '169', titleText: 'サムネイルジェネレーター',
-  fontFamily: "'Noto Sans JP', sans-serif", textAlign: 'middle-center',
-  fontSize: 72, textColor: '#ffffff', textShadow: 'none',
+  ratio: '169',
+  titleText: 'サムネイルジェネレーター',
+  fontFamily: "'Noto Sans JP', sans-serif",
+  hAlign: 'center',  // 'left' | 'center' | 'right'
+  textX: 50,         // 0–100 (%)
+  textY: 50,         // 0–100 (%)
+  fontSize: 72,
+  lineHeight: 1.4,
+  textColor: '#ffffff',
+  textShadow: 'none',
+  textEffect: 'normal', // 'normal' | 'outline' | 'emboss'
   bgType: 'solid', bgColor: '#1a1a2e',
   gradColor1: '#6c63ff', gradColor2: '#f093fb', gradDir: 'lr',
   pattern: 'dot', patternOpacity: 20,
-  overlayImg: null, overlaySize: 40, overlayX: 80, overlayY: 50,
+  overlayImg: null, overlayImgOriginal: null, overlaySize: 40, overlayX: 80, overlayY: 50,
   bgImageObj: null,
 };
 const SIZES = { '169': [1920,1080], 'note': [1280,670], '52': [1200,480], '11': [800,800], 'cocona': [1220,1240] };
@@ -392,22 +503,47 @@ const SIZES = { '169': [1920,1080], 'note': [1280,670], '52': [1200,480], '11': 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
+// プレビューズーム（state外：リセット不要）
+let previewZoom = 100;
+
+// キャンバス解像度をセット＋表示サイズを計算（内容はクリアされる→必ずdraw()を後で呼ぶ）
 function initCanvas() {
   const [w, h] = SIZES[S.ratio];
   canvas.width = w; canvas.height = h;
-  const previewW = document.querySelector('.preview-area').clientWidth  - 56;
-  const previewH = document.querySelector('.preview-area').clientHeight - 56;
-  const scale = Math.min(previewW / w, previewH / h, 1);
-  canvas.style.width  = Math.round(w * scale) + 'px';
-  canvas.style.height = Math.round(h * scale) + 'px';
+  updateCanvasScale();
   document.getElementById('previewSizeLabel').textContent = `${w} × ${h} px`;
   document.getElementById('sizeLabel').textContent = `${w} × ${h} px`;
 }
 
+// 表示サイズのCSSのみ変更（キャンバス内容はクリアしない）
+function updateCanvasScale() {
+  const [w, h] = SIZES[S.ratio];
+  const scroll = document.getElementById('canvasScroll');
+  const previewW = Math.max(scroll.clientWidth  - 48, 100);
+  const previewH = Math.max(scroll.clientHeight - 48, 100);
+  const fitScale = Math.min(previewW / w, previewH / h, 1);
+  const scale = fitScale * (previewZoom / 100);
+  canvas.style.width  = Math.round(w * scale) + 'px';
+  canvas.style.height = Math.round(h * scale) + 'px';
+}
+
+// ズームボタン：CSSサイズだけ変更（canvas.width は触らないのでクリアされない）
+function changeZoom(delta) {
+  previewZoom = Math.max(25, Math.min(300, previewZoom + delta));
+  document.getElementById('zoomDisplay').textContent = previewZoom + '%';
+  updateCanvasScale();
+}
+function resetZoom() {
+  previewZoom = 100;
+  document.getElementById('zoomDisplay').textContent = '100%';
+  updateCanvasScale();
+}
+
 function draw() {
-  const [w,h] = SIZES[S.ratio];
-  ctx.clearRect(0,0,w,h);
-  // 背景
+  const [w, h] = SIZES[S.ratio];
+  ctx.clearRect(0, 0, w, h);
+
+  // ---- 背景 ----
   if (S.bgType === 'solid') {
     ctx.fillStyle = S.bgColor; ctx.fillRect(0,0,w,h);
   } else if (S.bgType === 'gradient') {
@@ -422,7 +558,8 @@ function draw() {
   } else {
     ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0,0,w,h);
   }
-  // パターン
+
+  // ---- パターン ----
   if (S.pattern !== 'none') {
     ctx.save(); ctx.globalAlpha = S.patternOpacity / 100;
     if (S.pattern === 'dot') {
@@ -437,140 +574,319 @@ function draw() {
     }
     ctx.restore();
   }
-  // オーバーレイ画像
+
+  // ---- オーバーレイ画像 ----
   if (S.overlayImg) {
     const img = S.overlayImg;
-    const sz = (S.overlaySize/100) * Math.min(w,h);
-    const dw = sz * (img.width/img.height), dh = sz;
-    ctx.drawImage(img, (S.overlayX/100)*w - dw/2, (S.overlayY/100)*h - dh/2, dw, dh);
+    // サイズ：キャンバス短辺の S.overlaySize%
+    const sz = (S.overlaySize / 100) * Math.min(w, h);
+    const aspect = img.width / img.height;
+    const dw = sz * aspect, dh = sz;
+    // 中心座標（キャンバス外もOK）
+    const cx = (S.overlayX / 100) * w;
+    const cy = (S.overlayY / 100) * h;
+    ctx.drawImage(img, cx - dw/2, cy - dh/2, dw, dh);
   }
-  // テキスト
+
+  // ---- テキスト ----
   const text = S.titleText.trim();
   if (text) {
-    ctx.font = `700 ${S.fontSize}px ${S.fontFamily}`;
-    ctx.fillStyle = S.textColor;
+    // Zen Kaku Gothic New / MPLUS1 は900wt専用、他は700
+    const fw = (S.fontFamily.includes('Zen Kaku') || S.fontFamily.includes('MPLUS1')) ? '900' : '700';
+    ctx.font = `${fw} ${S.fontSize}px ${S.fontFamily}`;
     ctx.textBaseline = 'middle';
-    const shadows = { none:[0,0,'transparent'], light:[2,2,12,'rgba(0,0,0,.4)'], strong:[3,3,20,'rgba(0,0,0,.8)'] };
-    const sh = shadows[S.textShadow] || shadows.none;
-    ctx.shadowOffsetX=sh[0]; ctx.shadowOffsetY=sh[1]; ctx.shadowBlur=sh[2]||0; ctx.shadowColor=sh[3]||'transparent';
+    ctx.textAlign = S.hAlign;
+
     const lines = text.split('\n');
-    const lh = S.fontSize * 1.4;
-    const [va,ha] = S.textAlign.split('-');
-    const pad = 60;
-    let ax = ha==='left'?pad : ha==='right'?w-pad : w/2;
-    ctx.textAlign = ha==='left'?'left' : ha==='right'?'right' : 'center';
-    let ay = va==='top'? pad+S.fontSize/2 : va==='bottom'? h-pad-lines.length*lh+lh/2 : (h-lines.length*lh)/2+lh/2;
-    lines.forEach((ln,i) => ctx.fillText(ln, ax, ay+i*lh));
-    ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+    const lh = S.fontSize * S.lineHeight;
+
+    // テキストブロックの基準Y（ブロック中心が textY% の位置）
+    const blockH = lines.length * lh;
+    const baseY = (S.textY / 100) * h - blockH / 2 + lh / 2;
+
+    // X位置（揃え方向のアンカー）
+    const ax = (S.textX / 100) * w;
+
+    lines.forEach((ln, i) => {
+      const ly = baseY + i * lh;
+
+      if (S.textEffect === 'outline') {
+        // ---- アウトライン ----
+        ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+        const sw = Math.max(4, S.fontSize * 0.1);
+        ctx.lineWidth = sw;
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(0,0,0,0.92)';
+        ctx.strokeText(ln, ax, ly);
+        ctx.fillStyle = S.textColor;
+        ctx.fillText(ln, ax, ly);
+
+      } else if (S.textEffect === 'emboss') {
+        // ---- エンボス3D ----
+        ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+        const depth = Math.max(3, Math.round(S.fontSize * 0.06));
+        // 奥から手前に向かって影レイヤーを重ねる
+        for (let d = depth; d >= 1; d--) {
+          const alpha = 0.55 * (d / depth);
+          ctx.fillStyle = `rgba(0,0,0,${alpha.toFixed(2)})`;
+          ctx.fillText(ln, ax + d * 0.7, ly + d * 0.7);
+        }
+        // メイン塗り
+        ctx.fillStyle = S.textColor;
+        ctx.fillText(ln, ax, ly);
+        // 薄いストロークでエッジを締める
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(ln, ax, ly);
+        // ハイライト（左上に光）
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillText(ln, ax - 1.5, ly - 1.5);
+
+      } else if (S.textEffect === 'shadowB') {
+        // ---- シャドーB（モトヤ装飾シャドーB方式） ----
+        // ① 影（textColor）をオフセット位置に塗る
+        // ② 本体を背景色で塗りつぶす（透明に見せる）
+        // ③ 輪郭線（textColor）を細く乗せる
+        ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+        const off = Math.max(4, Math.round(S.fontSize * 0.1));
+        const bodyCol = S.bgType === 'solid'    ? S.bgColor
+                      : S.bgType === 'gradient' ? S.gradColor1
+                      : '#000000';
+        // ① 影
+        ctx.fillStyle = S.textColor;
+        ctx.fillText(ln, ax + off, ly + off);
+        // ② 本体を背景色で上書き（見た目を透明化）
+        ctx.fillStyle = bodyCol;
+        ctx.fillText(ln, ax, ly);
+        // ③ 輪郭
+        ctx.strokeStyle = S.textColor;
+        ctx.lineWidth = Math.max(1.5, S.fontSize * 0.03);
+        ctx.lineJoin = 'round';
+        ctx.strokeText(ln, ax, ly);
+
+      } else {
+        // ---- 通常 ----
+        const shadows = {
+          none:   [0, 0, 0,  'transparent'],
+          light:  [2, 2, 12, 'rgba(0,0,0,.4)'],
+          strong: [3, 3, 20, 'rgba(0,0,0,.8)']
+        };
+        const sh = shadows[S.textShadow] || shadows.none;
+        ctx.shadowOffsetX = sh[0]; ctx.shadowOffsetY = sh[1];
+        ctx.shadowBlur = sh[2];    ctx.shadowColor = sh[3];
+        ctx.fillStyle = S.textColor;
+        ctx.fillText(ln, ax, ly);
+      }
+    });
+
+    // 影のリセット
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   }
 }
 
 // ======================== CONTROLS ========================
-function on(id, ev, fn) { const el=document.getElementById(id); if(el) el.addEventListener(ev,fn); }
+function on(id, ev, fn) { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
 function setRange(id, dispId, prop, suffix='') {
-  on(id,'input',function(){ S[prop]=+this.value; document.getElementById(dispId).textContent=this.value+suffix; draw(); });
+  on(id, 'input', function() {
+    S[prop] = +this.value;
+    document.getElementById(dispId).textContent = this.value + suffix;
+    draw();
+  });
 }
 
 // 比率
-document.querySelectorAll('input[name="ratio"]').forEach(el=>el.addEventListener('change',()=>{ S.ratio=el.value; initCanvas(); draw(); }));
+document.querySelectorAll('input[name="ratio"]').forEach(el =>
+  el.addEventListener('change', () => { S.ratio = el.value; initCanvas(); draw(); })
+);
+
 // テキスト
-on('titleText','input',function(){ S.titleText=this.value; draw(); });
-on('fontFamily','input',function(){ S.fontFamily=this.value; draw(); });
-on('textAlign','input',function(){ S.textAlign=this.value; draw(); });
-setRange('fontSize','fontSizeDisplay','fontSize','px');
-// テキストカラー：カラーピッカー
+on('titleText', 'input', function() { S.titleText = this.value; draw(); });
+on('fontFamily', 'input', function() { S.fontFamily = this.value; draw(); });
+
+// 文字揃え（選択時に横位置もスナップ）
+document.querySelectorAll('input[name="hAlign"]').forEach(el =>
+  el.addEventListener('change', () => {
+    S.hAlign = el.value;
+    const snap = { left: 8, center: 50, right: 92 };
+    S.textX = snap[el.value];
+    document.getElementById('textX').value = S.textX;
+    document.getElementById('textXDisplay').textContent = S.textX + '%';
+    draw();
+  })
+);
+
+setRange('textX', 'textXDisplay', 'textX', '%');
+setRange('textY', 'textYDisplay', 'textY', '%');
+setRange('fontSize', 'fontSizeDisplay', 'fontSize', 'px');
+on('lineHeight', 'input', function() {
+  S.lineHeight = +this.value;
+  document.getElementById('lineHeightDisplay').textContent = S.lineHeight.toFixed(1);
+  draw();
+});
+
+// テキストスタイル
+const styleHints = {
+  normal:  '通常：影設定が有効です',
+  outline: 'アウトライン：黒縁取り＋塗り',
+  emboss:  'エンボス3D：立体的な奥行き効果',
+  shadowB: 'シャドーB：単色背景で最もきれいに出ます。Cherry Bomb One がおすすめ'
+};
+document.querySelectorAll('input[name="textEffect"]').forEach(el =>
+  el.addEventListener('change', () => {
+    S.textEffect = el.value;
+    document.getElementById('styleHint').textContent = styleHints[el.value];
+    draw();
+  })
+);
+
+// テキストカラー
 function applyTextColor(hex) {
   S.textColor = hex;
   document.getElementById('textColorPicker').value = hex;
   document.getElementById('textColorHex').value = hex;
   draw();
 }
-on('textColorPicker','input',function(){ applyTextColor(this.value); });
-on('textColorHex','input',function(){
-  if(/^#[0-9a-fA-F]{6}$/.test(this.value)){ applyTextColor(this.value); }
+on('textColorPicker', 'input', function() { applyTextColor(this.value); });
+on('textColorHex', 'input', function() {
+  if (/^#[0-9a-fA-F]{6}$/.test(this.value)) applyTextColor(this.value);
 });
-document.querySelectorAll('input[name="textColorPreset"]').forEach(el=>el.addEventListener('change',()=>{ applyTextColor(el.value); }));
-document.querySelectorAll('input[name="textShadow"]').forEach(el=>el.addEventListener('change',()=>{ S.textShadow=el.value; draw(); }));
+document.querySelectorAll('input[name="textColorPreset"]').forEach(el =>
+  el.addEventListener('change', () => applyTextColor(el.value))
+);
+document.querySelectorAll('input[name="textShadow"]').forEach(el =>
+  el.addEventListener('change', () => { S.textShadow = el.value; draw(); })
+);
+
 // 背景タイプ
-document.querySelectorAll('input[name="bgType"]').forEach(el=>el.addEventListener('change',()=>{
-  S.bgType=el.value;
-  document.getElementById('solidBgArea').style.display = el.value==='solid'?'':'none';
-  document.getElementById('gradBgArea').style.display  = el.value==='gradient'?'':'none';
-  document.getElementById('imgBgArea').style.display   = el.value==='image'?'':'none';
-  draw();
-}));
-// 背景色
-on('bgColor','input',function(){ S.bgColor=this.value; document.getElementById('bgColorHex').value=this.value; draw(); });
-on('bgColorHex','input',function(){ if(/^#[0-9a-fA-F]{6}$/.test(this.value)){ S.bgColor=this.value; document.getElementById('bgColor').value=this.value; draw(); } });
-on('gradColor1','input',function(){ S.gradColor1=this.value; draw(); });
-on('gradColor2','input',function(){ S.gradColor2=this.value; draw(); });
-on('gradDir','input',function(){ S.gradDir=this.value; draw(); });
-on('bgImageFile','change',function(){
-  if(!this.files[0]) return;
-  const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{ S.bgImageObj=img; draw(); }; img.src=ev.target.result; };
-  r.readAsDataURL(this.files[0]);
-  document.getElementById('bgImgName').textContent='📂 '+this.files[0].name;
+document.querySelectorAll('input[name="bgType"]').forEach(el =>
+  el.addEventListener('change', () => {
+    S.bgType = el.value;
+    document.getElementById('solidBgArea').style.display = el.value === 'solid'    ? '' : 'none';
+    document.getElementById('gradBgArea').style.display  = el.value === 'gradient' ? '' : 'none';
+    document.getElementById('imgBgArea').style.display   = el.value === 'image'    ? '' : 'none';
+    draw();
+  })
+);
+on('bgColor', 'input', function() { S.bgColor = this.value; document.getElementById('bgColorHex').value = this.value; draw(); });
+on('bgColorHex', 'input', function() {
+  if (/^#[0-9a-fA-F]{6}$/.test(this.value)) { S.bgColor = this.value; document.getElementById('bgColor').value = this.value; draw(); }
 });
+on('gradColor1', 'input', function() { S.gradColor1 = this.value; draw(); });
+on('gradColor2', 'input', function() { S.gradColor2 = this.value; draw(); });
+on('gradDir', 'input', function() { S.gradDir = this.value; draw(); });
+on('bgImageFile', 'change', function() {
+  if (!this.files[0]) return;
+  const r = new FileReader();
+  r.onload = ev => { const img = new Image(); img.onload = () => { S.bgImageObj = img; draw(); }; img.src = ev.target.result; };
+  r.readAsDataURL(this.files[0]);
+  document.getElementById('bgImgName').textContent = '📂 ' + this.files[0].name;
+});
+
 // パターン
-document.querySelectorAll('input[name="pattern"]').forEach(el=>el.addEventListener('change',()=>{ S.pattern=el.value; draw(); }));
-setRange('patternOpacity','patternOpacityDisplay','patternOpacity','%');
+document.querySelectorAll('input[name="pattern"]').forEach(el =>
+  el.addEventListener('change', () => { S.pattern = el.value; draw(); })
+);
+setRange('patternOpacity', 'patternOpacityDisplay', 'patternOpacity', '%');
+
 // オーバーレイ
-on('overlayFile','change',function(){
-  if(!this.files[0]) return;
-  const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{ S.overlayImg=img; document.getElementById('overlayControls').style.display='flex'; draw(); }; img.src=ev.target.result; };
+on('overlayFile', 'change', function() {
+  if (!this.files[0]) return;
+  // ★ 新しい画像をアップロードしたら previous の original をリセット
+  S.overlayImgOriginal = null;
+  document.getElementById('restoreBgBtn').style.display = 'none';
+  document.getElementById('removeBgBtn').textContent = '✂️ 背景を透過';
+  document.getElementById('removeBgStatus').textContent = '';
+
+  const r = new FileReader();
+  r.onload = ev => {
+    const img = new Image();
+    img.onload = () => { S.overlayImg = img; document.getElementById('overlayControls').style.display = 'flex'; draw(); };
+    img.src = ev.target.result;
+  };
   r.readAsDataURL(this.files[0]);
-  document.getElementById('overlayName').textContent='📂 '+this.files[0].name;
+  document.getElementById('overlayName').textContent = '📂 ' + this.files[0].name;
 });
-setRange('overlaySize','overlaySizeDisplay','overlaySize','%');
-setRange('overlayX','overlayXDisplay','overlayX','%');
-setRange('overlayY','overlayYDisplay','overlayY','%');
-function clearOverlay(){ S.overlayImg=null; document.getElementById('overlayFile').value=''; document.getElementById('overlayName').textContent=''; document.getElementById('overlayControls').style.display='none'; draw(); }
+setRange('overlaySize', 'overlaySizeDisplay', 'overlaySize', '%');
+setRange('overlayX', 'overlayXDisplay', 'overlayX', '%');
+setRange('overlayY', 'overlayYDisplay', 'overlayY', '%');
+
+function clearOverlay() {
+  S.overlayImg = null;
+  S.overlayImgOriginal = null;
+  document.getElementById('overlayFile').value = '';
+  document.getElementById('overlayName').textContent = '';
+  document.getElementById('overlayControls').style.display = 'none';
+  document.getElementById('restoreBgBtn').style.display = 'none';
+  document.getElementById('removeBgBtn').textContent = '✂️ 背景を透過';
+  document.getElementById('removeBgStatus').textContent = '';
+  draw();
+}
 
 // ======================== DOWNLOAD ========================
-function downloadPNG(){
-  const names={'169':'thumbnail-1920x1080','note':'thumbnail-note-1280x670','52':'thumbnail-1200x480','11':'thumbnail-800x800','cocona':'thumbnail-coconala-1220x1240'};
-  const a=document.createElement('a'); a.download=names[S.ratio]+'.png'; a.href=canvas.toDataURL('image/png'); a.click();
-  const hint=document.getElementById('downloadHint'); hint.textContent='✅ ダウンロード完了！';
-  setTimeout(()=>hint.textContent='高解像度PNGで出力されます',2000);
+function downloadPNG() {
+  const names = { '169':'thumbnail-1920x1080', 'note':'thumbnail-note-1280x670', '52':'thumbnail-1200x480', '11':'thumbnail-800x800', 'cocona':'thumbnail-coconala-1220x1240' };
+  const a = document.createElement('a');
+  a.download = names[S.ratio] + '.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  const hint = document.getElementById('downloadHint');
+  hint.textContent = '✅ ダウンロード完了！';
+  setTimeout(() => hint.textContent = '高解像度PNGで出力されます', 2000);
 }
 
 // ======================== RESET ========================
 function resetAll() {
   if (!confirm('すべての設定を初期状態に戻しますか？')) return;
 
-  S.ratio = '169';
-  S.titleText = 'サムネイルジェネレーター';
-  S.fontFamily = "'Noto Sans JP', sans-serif";
-  S.textAlign = 'middle-center';
-  S.fontSize = 72;
-  S.textColor = '#ffffff';
-  S.textShadow = 'none';
-  S.bgType = 'solid';
-  S.bgColor = '#1a1a2e';
-  S.gradColor1 = '#6c63ff';
-  S.gradColor2 = '#f093fb';
-  S.gradDir = 'lr';
-  S.pattern = 'dot';
+  S.ratio        = '169';
+  S.titleText    = 'サムネイルジェネレーター';
+  S.fontFamily   = "'Noto Sans JP', sans-serif";
+  S.hAlign       = 'center';
+  S.textX        = 50;
+  S.textY        = 50;
+  S.fontSize     = 72;
+  S.textColor    = '#ffffff';
+  S.textShadow   = 'none';
+  S.textEffect   = 'normal';
+  S.bgType       = 'solid';
+  S.bgColor      = '#1a1a2e';
+  S.gradColor1   = '#6c63ff';
+  S.gradColor2   = '#f093fb';
+  S.gradDir      = 'lr';
+  S.pattern      = 'dot';
   S.patternOpacity = 20;
-  S.overlayImg = null;
-  S.overlaySize = 40;
-  S.overlayX = 80;
-  S.overlayY = 50;
-  S.bgImageObj = null;
+  S.overlayImg   = null;
+  S.overlaySize  = 40;
+  S.overlayX     = 80;
+  S.overlayY     = 50;
+  S.bgImageObj   = null;
 
   document.getElementById('r169').checked = true;
   document.getElementById('titleText').value = S.titleText;
   document.getElementById('fontFamily').value = S.fontFamily;
-  document.getElementById('textAlign').value = S.textAlign;
+  document.querySelectorAll('input[name="hAlign"]').forEach(el => { el.checked = el.value === S.hAlign; });
+  document.getElementById('textX').value = S.textX;
+  document.getElementById('textXDisplay').textContent = S.textX + '%';
+  document.getElementById('textY').value = S.textY;
+  document.getElementById('textYDisplay').textContent = S.textY + '%';
   document.getElementById('fontSize').value = S.fontSize;
   document.getElementById('fontSizeDisplay').textContent = S.fontSize + 'px';
+  S.lineHeight = 1.4;
+  document.getElementById('lineHeight').value = S.lineHeight;
+  document.getElementById('lineHeightDisplay').textContent = S.lineHeight.toFixed(1);
+  S.textEffect = 'normal';
+  document.querySelectorAll('input[name="textEffect"]').forEach(el => { el.checked = el.value === S.textEffect; });
+  document.getElementById('styleHint').textContent = styleHints[S.textEffect];
   applyTextColor(S.textColor);
   document.querySelectorAll('input[name="textColorPreset"]').forEach(el => el.checked = false);
+  document.getElementById('tcWhite').checked = true;
   document.querySelectorAll('input[name="textShadow"]').forEach(el => { el.checked = el.value === S.textShadow; });
   document.querySelectorAll('input[name="bgType"]').forEach(el => { el.checked = el.value === S.bgType; });
   document.getElementById('solidBgArea').style.display = '';
-  document.getElementById('gradBgArea').style.display = 'none';
-  document.getElementById('imgBgArea').style.display = 'none';
+  document.getElementById('gradBgArea').style.display  = 'none';
+  document.getElementById('imgBgArea').style.display   = 'none';
   document.getElementById('bgColor').value = S.bgColor;
   document.getElementById('bgColorHex').value = S.bgColor;
   document.getElementById('gradColor1').value = S.gradColor1;
@@ -581,23 +897,138 @@ function resetAll() {
   document.querySelectorAll('input[name="pattern"]').forEach(el => { el.checked = el.value === S.pattern; });
   document.getElementById('patternOpacity').value = S.patternOpacity;
   document.getElementById('patternOpacityDisplay').textContent = S.patternOpacity + '%';
+  document.getElementById('overlaySize').value = S.overlaySize;
+  document.getElementById('overlaySizeDisplay').textContent = S.overlaySize + '%';
+  document.getElementById('overlayX').value = S.overlayX;
+  document.getElementById('overlayXDisplay').textContent = S.overlayX + '%';
+  document.getElementById('overlayY').value = S.overlayY;
+  document.getElementById('overlayYDisplay').textContent = S.overlayY + '%';
+  document.getElementById('bgTolerance').value = 30;
+  document.getElementById('bgToleranceDisplay').textContent = '30';
   clearOverlay();
-
   initCanvas();
   draw();
 }
 
+// ======================== BACKGROUND REMOVAL ========================
+on('bgTolerance', 'input', function() {
+  document.getElementById('bgToleranceDisplay').textContent = this.value;
+});
+
+function removeBg() {
+  if (!S.overlayImg) return;
+  // 元画像を保存（初回のみ）
+  if (!S.overlayImgOriginal) S.overlayImgOriginal = S.overlayImg;
+
+  const btn = document.getElementById('removeBgBtn');
+  const status = document.getElementById('removeBgStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ 処理中…';
+  status.textContent = '';
+
+  const tol = +document.getElementById('bgTolerance').value;
+
+  // ★ 常にオリジナルから処理する
+  const sourceImg = S.overlayImgOriginal;
+
+  setTimeout(() => {
+    const dataURL = doRemoveBg(sourceImg, tol);
+    const newImg = new Image();
+    newImg.onload = () => {
+      S.overlayImg = newImg;
+      document.getElementById('restoreBgBtn').style.display = '';
+      btn.textContent = '✂️ 再透過';
+      btn.disabled = false;
+      status.textContent = '✅ 背景を透過しました';
+      setTimeout(() => status.textContent = '', 2000);
+      draw();
+    };
+    newImg.src = dataURL;
+  }, 50);
+}
+
+function doRemoveBg(img, tolerance) {
+  const w = img.naturalWidth  || img.width;
+  const h = img.naturalHeight || img.height;
+  const oc = document.createElement('canvas');
+  oc.width = w; oc.height = h;
+  const octx = oc.getContext('2d');
+  octx.drawImage(img, 0, 0);
+
+  const imageData = octx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+
+  function px(x, y) {
+    const i=(y*w+x)*4;
+    if (data[i+3] === 0) return null;
+    return [data[i],data[i+1],data[i+2]];
+  }
+  const samples = [];
+  const step = Math.max(1, Math.floor(Math.min(w, h) / 16));
+  for (let x = 0; x < w; x += step) { samples.push(px(x, 0)); samples.push(px(x, h-1)); }
+  for (let y = 0; y < h; y += step) { samples.push(px(0, y)); samples.push(px(w-1, y)); }
+  const validSamples = samples.filter(s => s !== null);
+  if (validSamples.length === 0) return oc.toDataURL('image/png');
+
+  const rs = validSamples.map(c=>c[0]).sort((a,b)=>a-b);
+  const gs = validSamples.map(c=>c[1]).sort((a,b)=>a-b);
+  const bs = validSamples.map(c=>c[2]).sort((a,b)=>a-b);
+  const mid = (rs.length / 2) | 0;
+  const bgR = rs[mid], bgG = gs[mid], bgB = bs[mid];
+
+  for (let p = 0; p < w * h; p++) {
+    const i = p * 4;
+    const dr = data[i]   - bgR;
+    const dg = data[i+1] - bgG;
+    const db = data[i+2] - bgB;
+    if (Math.sqrt(dr*dr + dg*dg + db*db) <= tolerance) {
+      data[i+3] = 0;
+    }
+  }
+
+  const alpha = new Uint8Array(w * h);
+  for (let p = 0; p < w*h; p++) alpha[p] = data[p*4+3];
+
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      const p = y*w+x;
+      if (alpha[p] === 0) continue;
+      const t = (alpha[p-1]===0?1:0) + (alpha[p+1]===0?1:0)
+              + (alpha[p-w]===0?1:0) + (alpha[p+w]===0?1:0);
+      if (t >= 2) data[p*4+3] = 80;
+      else if (t === 1) data[p*4+3] = 160;
+    }
+  }
+
+  octx.putImageData(imageData, 0, 0);
+  return oc.toDataURL('image/png');
+}
+
+function restoreOriginal() {
+  if (!S.overlayImgOriginal) return;
+  S.overlayImg = S.overlayImgOriginal;
+  S.overlayImgOriginal = null;
+  document.getElementById('restoreBgBtn').style.display = 'none';
+  document.getElementById('removeBgBtn').textContent = '✂️ 背景を透過';
+  const status = document.getElementById('removeBgStatus');
+  status.textContent = '↩ 元の画像に戻しました';
+  setTimeout(() => status.textContent = '', 1500);
+  draw();
+}
+
 // ======================== SECTION TOGGLE ========================
-function toggleSection(h){ h.classList.toggle('collapsed'); h.nextElementSibling.classList.toggle('hidden'); }
+function toggleSection(h) { h.classList.toggle('collapsed'); h.nextElementSibling.classList.toggle('hidden'); }
 
 // ======================== FONTS ========================
-const lnk=document.createElement('link'); lnk.rel='stylesheet';
-lnk.href='https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&family=M+PLUS+Rounded+1c:wght@700&display=swap';
+const lnk = document.createElement('link');
+lnk.rel = 'stylesheet';
+lnk.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&family=M+PLUS+Rounded+1c:wght@700&family=Zen+Kaku+Gothic+New:wght@900&family=Rampart+One&family=Cherry+Bomb+One&family=Kosugi+Maru&family=Kaisei+Decol:wght@700&display=swap';
 document.head.appendChild(lnk);
 
 // ======================== INIT ========================
 initCanvas(); draw();
-window.addEventListener('resize', ()=>{ initCanvas(); draw(); });
+document.fonts.ready.then(() => draw());
+window.addEventListener('resize', () => { initCanvas(); draw(); });
 </script>
 </body>
 </html>
